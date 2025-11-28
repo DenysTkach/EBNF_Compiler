@@ -1,0 +1,124 @@
+@@grammar :: minioberon
+
+
+ident     = /[A-Za-z][A-Za-z0-9_]*/ ;
+intlit    = /[0-9]+/ ;
+reallit   = /[0-9]+\.[0-9]+([eE][+\-]?[0-9]+)?/ ;
+number    = reallit | intlit ;
+stringlit = /"([^"\\\r\n]|\\.)*"/ ;
+
+program = module $ ;
+
+module =
+  "MODULE" ident ";" block ident "." ;
+
+block =
+  declarations [ "BEGIN" statseq ] "END" ;
+
+declarations =
+  { constsec | typesec | varsec | procdecl } ;
+
+constsec  = "CONST" constdecl { ";" constdecl } ";" ;
+constdecl = ident "=" expr ;
+
+typesec  = "TYPE" typedecl { ";" typedecl } ";" ;
+typedecl = ident "=" type ;
+
+varsec  = "VAR" vardecl { ";" vardecl } ";" ;
+vardecl = identlist ":" type ;
+
+type =
+    basetype
+  | arraytype
+  | recordtype
+  | ident ;
+
+basetype  = "INTEGER" | "REAL" | "STRING" | "BOOLEAN" ;
+
+arraytype = "ARRAY" "[" dimlist "]" "OF" elemtype ;
+dimlist   = ",".{ (ident | intlit) }+ ;
+elemtype  = basetype | arraytype | ident ;
+
+recordtype = "RECORD" { identlist ":" type ";" } "END" ;
+
+procdecl =
+    "PROCEDURE" ident "(" [ paramlist ] ")" ";" block ident ";"
+  | "FUNCTION"  ident "(" [ paramlist ] ")" ":" type ";" block ident ";"
+  ;
+
+paramlist = ";".{ param }+ ;
+param     = [ "VAR" ] identlist ":" type ;
+identlist = ",".{ ident }+ ;
+
+statseq = statement { ";" statement } [ ";" ] ;
+
+statement =
+    assign
+  | call
+  | ifstmt
+  | whilestmt
+  | forstmt
+  | returnstmt
+  ;
+
+assign = designator ":=" expr ;
+
+call =
+    ident "(" arglist ")"
+  | ident "(" ")"
+  ;
+arglist = ",".{ expr }+ ;
+
+elsif_clause = "ELSIF" expr "THEN" statseq ;
+elsif_list   = { elsif_clause }+ ;
+
+ifstmt =
+  "IF" expr "THEN" statseq
+  [ elsif_list ]
+  [ "ELSE" statseq ]
+  "END" ;
+
+whilestmt = "WHILE" expr "DO" statseq "END" ;
+
+forstmt =
+  "FOR" ident ":=" expr "TO" expr [ "BY" expr ]
+  "DO" statseq "END" ;
+
+returnstmt = "RETURN" expr | "RETURN" ;
+
+designator =
+    ident selectors
+  | ident
+  ;
+selectors = { selector }+ ;
+selector  = "[" exprlist "]" | "." ident ;
+exprlist  = ",".{ expr }+ ;
+
+expr = simpleexpr [ relop simpleexpr ] ;
+relop = "=" | "#" | "<" | "<=" | ">" | ">=" ;
+
+simpleexpr =
+    [ sign ] term [ addchain ] ;
+
+sign     = "+" | "-" ;
+addchain = { addop term }+ ;
+addop    = "+" | "-" ;
+
+term =
+    factor [ mulchain ] ;
+
+mulchain = { mulop factor }+ ;
+mulop    = "*" | "/" ;
+
+factor =
+    number
+  | stringlit
+  | boollit
+  | call
+  | designator
+  | "(" expr ")"
+  ;
+
+boollit = "TRUE" | "FALSE" ;
+
+
